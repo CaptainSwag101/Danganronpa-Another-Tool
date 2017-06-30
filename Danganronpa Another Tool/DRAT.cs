@@ -74,15 +74,15 @@ namespace Danganronpa_Another_Tool
             // if (!tabControl1.SelectedTab.Text.Contains("PSP")) Button22 doesn't do anything for now, so...
             // CloneButton(ref TableLayoutToFill, ref button22);
 
-            // Clone the "Unpack/Repack .WAD" buttons only if the new tab is about a PC game.
-            if (tabControl1.SelectedTab.Text.Contains("PC"))
+            // Clone the "Unpack/Repack .WAD" buttons only if the new tab is about a PC game, except for DRAE (PC).
+            if (tabControl1.SelectedTab.Text.Contains("PC") && !tabControl1.SelectedTab.Text.Contains("DRAE"))
             {
                 CloneButton(ref TableLayoutToFill, ref button1);
                 CloneButton(ref TableLayoutToFill, ref button2);
             }
-            /* Clone the "Unpack/Repack .CPK" buttons only if the new tab is about a PSVITA game.
+            /* Clone the "Unpack/Repack .CPK" buttons only if the new tab is about a PSVITA game, or DRAE (PC).
             "DR1 (PSVITA)"'s tab contains the original buttons, so there is no need to clone the buttons there. */
-            else if (tabControl1.SelectedTab.Text.Contains("PSVITA") && !tabControl1.SelectedTab.Text.Contains("DR1 (PSVITA)"))
+            else if (tabControl1.SelectedTab.Text.Contains("DRAE") || (tabControl1.SelectedTab.Text.Contains("PSVITA") && !tabControl1.SelectedTab.Text.Contains("DR1 (PSVITA)")))
             {
                 CloneButton(ref TableLayoutToFill, ref button3);
                 CloneButton(ref TableLayoutToFill, ref button4);
@@ -523,7 +523,59 @@ namespace Danganronpa_Another_Tool
 
         private void button3_Click(object sender, EventArgs e) // UNPACK .CPK
         {
-            Process.Start("https://github.com/s1cp/VitaGuide/wiki#unpacking-the-files");
+            if (File.Exists(Application.StartupPath + '\\' + "cpk_unpack.exe"))
+            {
+                using (OpenFileDialog CPK = new OpenFileDialog())
+                {
+                    CPK.Title = "Select one or more \"file.cpk\"";
+                    CPK.Filter = ".cpk|*.cpk|All Files (*.*)|*.*";
+                    CPK.FileName = "*.cpk";
+                    CPK.Multiselect = true;
+
+                    if (CPK.ShowDialog() == DialogResult.OK)
+                    {
+                        label5.Text = "Wait..."; // Change "Ready!" to "Wait..."
+                        label5.Refresh(); // Refresh the Status label.
+
+                        foreach (string SingleCPK in CPK.FileNames)
+                        {
+                            string DestinationDir = tabControl1.SelectedTab.Text + " [MANUAL MODE]\\EXTRACTED\\CPK\\" + Path.GetFileNameWithoutExtension(SingleCPK);
+
+                            if (Directory.Exists(DestinationDir) == false)
+                                Directory.CreateDirectory(DestinationDir);
+
+                            ExtractCPK(SingleCPK, DestinationDir);
+                        }
+
+                        label5.Text = "Ready!"; // Change the "Status" to "Ready!".
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Missing cpk_unpack.exe! Click OK to open the download webpage, and place the file in this program's directory.", "Status", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Process.Start("https://github.com/s1cp/VitaGuide/wiki#unpacking-the-files");
+            }
+        }
+
+        private void ExtractCPK(string filePath, string destinationDir)
+        {
+            label5.Text = "Wait..."; // Change "Ready!" to "Wait..."
+            label5.Refresh(); // Refresh the Status label.
+
+            Process cpkExtractor = Process.Start(Application.StartupPath + '\\' + "cpk_unpack.exe", '"' + filePath + '"');
+            cpkExtractor.WaitForExit();
+            
+            if (cpkExtractor.ExitCode != 0)
+            {
+                label5.Text = "Error!"; // Change the "Status" to "Ready!".
+                MessageBox.Show("An error occurred!", "Status", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                label5.Text = "Ready!"; // Change the "Status" to "Ready!".
+                MessageBox.Show("Done!", "Status", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         private void button4_Click(object sender, EventArgs e) // REPACK .CPK
